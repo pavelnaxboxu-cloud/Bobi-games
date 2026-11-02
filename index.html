@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BOBI GAMES</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101322;color:white;font-family:Arial;text-align:center}
+header{padding:28px;background:#191f38}
+h1{font-size:38px;color:#65e6ff;margin:0}
+main{max-width:650px;margin:25px auto;padding:15px}
+.game{background:#202943;padding:22px;border-radius:16px;margin:18px 0}
+button{background:#65e6ff;color:#101322;border:0;border-radius:9px;padding:12px 18px;font-weight:bold;margin:5px}
+#board{display:grid;grid-template-columns:repeat(8,1fr);max-width:400px;margin:15px auto}
+.square{aspect-ratio:1;font-size:clamp(22px,7vw,42px);display:grid;place-items:center;cursor:pointer}
+.light{background:#e7e5d5;color:#111}
+.dark{background:#64866c;color:#111}
+.selected{outline:4px solid #65e6ff;outline-offset:-4px}
+#tic{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;max-width:260px;margin:15px auto}
+.cell{height:80px;font-size:35px;background:#34415f;color:white}
+</style>
+</head>
+<body>
+<header>
+<h1>🎮 BOBI GAMES</h1>
+<p>Tvůj herní svět!</p>
+</header>
+<main>
+<section class="game">
+<h2>♟️ Šachy proti počítači</h2>
+<p id="status">Na tahu jsou bílé figurky.</p>
+<div id="board"></div>
+<button onclick="resetChess()">Nová hra</button>
+</section>
+<section class="game">
+<h2>⭕ Piškvorky</h2>
+<p id="ticStatus">Hraje X</p>
+<div id="tic"></div>
+<button onclick="resetTic()">Nová hra</button>
+</section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+const game=new Chess();
+const symbols={wp:"♙",wr:"♖",wn:"♘",wb:"♗",wq:"♕",wk:"♔",bp:"♟",br:"♜",bn:"♞",bb:"♝",bq:"♛",bk:"♚"};
+let selected=null;
+function draw(){
+ const board=document.getElementById("board");board.innerHTML="";
+ const rows=game.board();
+ rows.forEach((row,r)=>row.forEach((piece,c)=>{
+  const sq=document.createElement("div");
+  sq.className="square "+((r+c)%2?"dark":"light");
+  if(selected&&selected.r===r&&selected.c===c)sq.classList.add("selected");
+  if(piece)sq.textContent=symbols[piece.color+piece.type];
+  sq.onclick=()=>clickSquare(r,c);
+  board.appendChild(sq);
+ }));
+ document.getElementById("status").textContent=game.isGameOver()?"Konec hry! Začni novou hru.":game.turn()==="w"?"Tvůj tah – bílé figurky":"Počítač přemýšlí...";
+}
+function clickSquare(r,c){
+ if(game.game_over()||game.turn()!=="w")return;
+ const piece=game.get(String.fromCharCode(97+c)+(8-r));
+ if(selected){
+  const from=String.fromCharCode(97+selected.c)+(8-selected.r);
+  const to=String.fromCharCode(97+c)+(8-r);
+  const move=game.move({from,to,promotion:"q"});
+  selected=null;
+  if(move){draw();if(!game.game_over())setTimeout(computerMove,400);return;}
+ }
+ if(piece&&piece.color==="w")selected={r,c};else selected=null;
+ draw();
+}
+function computerMove(){
+ if(game.game_over())return;
+ const moves=game.moves();
+ if(moves.length)game.move(moves[Math.floor(Math.random()*moves.length)]);
+ draw();
+}
+function resetChess(){game.reset();selected=null;draw();}
+draw();
+
+let cells=Array(9).fill(""),finished=false;
+function drawTic(){
+ const el=document.getElementById("tic");el.innerHTML="";
+ cells.forEach((v,i)=>{
+  const b=document.createElement("button");b.className="cell";b.textContent=v;
+  b.onclick=()=>playTic(i);el.appendChild(b);
+ });
+}
+function playTic(i){
+ if(cells[i]||finished)return;
+ cells[i]="X";
+ if(checkWin("X")){endTic("Vyhrál hráč X!");return;}
+ if(cells.every(Boolean)){endTic("Remíza!");return;}
+ let empty=cells.map((v,i)=>v?null:i).filter(v=>v!==null);
+ cells[empty[Math.floor(Math.random()*empty.length)]]="O";
+ if(checkWin("O")){endTic("Vyhrál hráč O!");return;}
+ if(cells.every(Boolean)){endTic("Remíza!");return;}
+ document.getElementById("ticStatus").textContent="Hraje X";
+ drawTic();
+}
+function checkWin(p){
+ return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]].some(line=>line.every(i=>cells[i]===p));
+}
+function endTic(msg){finished=true;document.getElementById("ticStatus").textContent=msg;drawTic();}
+function resetTic(){cells=Array(9).fill("");finished=false;document.getElementById("ticStatus").textContent="Hraje X";drawTic();}
+drawTic();
+</script>
+</body>
+</html>
